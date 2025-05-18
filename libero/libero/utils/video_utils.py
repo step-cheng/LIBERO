@@ -4,8 +4,9 @@ import numpy as np
 
 
 class VideoWriter:
-    def __init__(self, video_path, save_video=False, fps=30, single_video=True):
+    def __init__(self, video_path, f_name_base, save_video=False, fps=30, single_video=True):
         self.video_path = video_path
+        self.f_name_base = f_name_base
         self.save_video = save_video
         self.fps = fps
         self.image_buffer = {}
@@ -33,10 +34,10 @@ class VideoWriter:
             if idx not in self.last_images:
                 self.last_images[idx] = None
             if not done:
-                self.image_buffer[idx].append(obs[camera_name][::-1])
+                self.image_buffer[idx].append(obs[camera_name][::-1,::-1])
             else:
                 if self.last_images[idx] is None:
-                    self.last_images[idx] = obs[camera_name][::-1]
+                    self.last_images[idx] = obs[camera_name][::-1,::-1]
                 original_image = np.copy(self.last_images[idx])
                 blank_image = np.ones_like(original_image) * 128
                 blank_image[:, :, 0] = 0
@@ -61,7 +62,7 @@ class VideoWriter:
         if self.save_video:
             os.makedirs(self.video_path, exist_ok=True)
             if self.single_video:
-                video_name = os.path.join(self.video_path, f"video.mp4")
+                video_name = os.path.join(self.video_path, f"{self.f_name_base}_video.mp4")
                 video_writer = imageio.get_writer(video_name, fps=self.fps)
                 for idx in self.image_buffer.keys():
                     for im in self.image_buffer[idx]:
@@ -69,7 +70,7 @@ class VideoWriter:
                 video_writer.close()
             else:
                 for idx in self.image_buffer.keys():
-                    video_name = os.path.join(self.video_path, f"{idx}.mp4")
+                    video_name = os.path.join(self.video_path, f"{self.f_name_base}_trial={idx}.mp4")
                     video_writer = imageio.get_writer(video_name, fps=self.fps)
                     for im in self.image_buffer[idx]:
                         video_writer.append_data(im)

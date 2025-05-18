@@ -151,11 +151,12 @@ def create_experiment_dir(cfg):
 
 def get_task_embs(cfg, descriptions):
     logging.set_verbosity_error()
+    print(f"getting embeddings of type {cfg.task_embedding_format}")
 
     if cfg.task_embedding_format == "one-hot":
         # offset defaults to 1, if we have pretrained another model, this offset
         # starts from the pretrained number of tasks + 1
-        offset = cfg.task_embedding_one_hot_offset
+        offset = cfg.task_embedding_one_hot_offset if hasattr(cfg, "task_embedding_one_hot_offset") else 1
         descriptions = [f"Task {i+offset}" for i in range(len(descriptions))]
 
     if cfg.task_embedding_format == "bert" or cfg.task_embedding_format == "one-hot":
@@ -165,10 +166,12 @@ def get_task_embs(cfg, descriptions):
         model = AutoModel.from_pretrained(
             "bert-base-cased", cache_dir=to_absolute_path("./bert")
         )
+        lengths = [len(tz.tokenize(d)) for d in descriptions]
+        max_len = max(lengths) + 2
         tokens = tz(
             text=descriptions,  # the sentence to be encoded
             add_special_tokens=True,  # Add [CLS] and [SEP]
-            max_length=cfg.data.max_word_len,  # maximum length of a sentence
+            max_length=max_len,  # maximum length of a sentence
             padding="max_length",
             return_attention_mask=True,  # Generate the attention mask
             return_tensors="pt",  # ask the function to return PyTorch tensors
@@ -178,6 +181,29 @@ def get_task_embs(cfg, descriptions):
         task_embs = model(tokens["input_ids"], tokens["attention_mask"])[
             "pooler_output"
         ].detach()
+    if cfg.task_embedding_format == "distilbert":
+        tz = AutoTokenizer.from_pretrained(
+            "distilbert-base-uncased", cache_dir=to_absolute_path("./distilbert")
+        )
+        model = AutoModel.from_pretrained(
+            "distilbert-base-uncased", cache_dir=to_absolute_path("./distilbert")
+        )
+        lengths = [len(tz.tokenize(d)) for d in descriptions]
+        max_len = max(lengths) + 2
+        tokens = tz(
+            text=descriptions,  # the sentence to be encoded
+            add_special_tokens=True,  # Add [CLS] and [SEP]
+            max_length=max_len,  # maximum length of a sentence
+            padding="max_length",
+            return_attention_mask=True,  # Generate the attention mask
+            return_tensors="pt",  # ask the function to return PyTorch tensors
+        )
+        masks = tokens["attention_mask"]
+        input_ids = tokens["input_ids"]
+        model.eval()
+        with torch.no_grad():
+            outputs = model(tokens["input_ids"], tokens["attention_mask"])
+            task_embs = outputs.last_hidden_state[:, 0, :].detach()
     elif cfg.task_embedding_format == "gpt2":
         tz = AutoTokenizer.from_pretrained("gpt2")
         tz.pad_token = tz.eos_token
@@ -216,5 +242,11 @@ def get_task_embs(cfg, descriptions):
             return_tensors="pt",  # ask the function to return PyTorch tensors
         )
         task_embs = model(**tokens)["pooler_output"].detach()
-    cfg.policy.language_encoder.network_kwargs.input_size = task_embs.shape[-1]
+    if hasattr(cfg, "policy.language_encoder.network_kwargs.input_size"):
+        cfg.policy.language_encoder.network_kwargs.input_size = task_embs.shape[-1]
+
+    del tz
+    del model
+    import gc
+    gc.collect()
     return task_embs

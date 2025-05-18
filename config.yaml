@@ -1,0 +1,5 @@
+assets: /home/guoye/stephen/RIBS/LIBERO/libero/libero/./assets
+bddl_files: /home/guoye/stephen/RIBS/LIBERO/libero/libero/./bddl_files
+benchmark_root: /home/guoye/stephen/RIBS/LIBERO/libero/libero
+datasets: /home/guoye/stephen/RIBS/LIBERO/libero/libero/../datasets
+init_states: /home/guoye/stephen/RIBS/LIBERO/libero/libero/./init_files

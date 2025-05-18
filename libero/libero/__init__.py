@@ -60,10 +60,12 @@ def set_libero_default_path(custom_location=os.path.dirname(os.path.abspath(__fi
 
 
 if not os.path.exists(libero_config_path):
+    print(f"Creating the directory {libero_config_path} for storing the config file.")
     os.makedirs(libero_config_path)
 
 if not os.path.exists(config_file):
     # Create a default config file
+    print(f"Creating the config file {config_file}.")
 
     default_path_dict = get_default_path_dict()
     answer = input(
