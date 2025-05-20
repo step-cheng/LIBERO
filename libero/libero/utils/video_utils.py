@@ -75,4 +75,4 @@ class VideoWriter:
                     for im in self.image_buffer[idx]:
                         video_writer.append_data(im)
                     video_writer.close()
-            print(f"Saved videos to {self.video_path}.")
+            print(f"Saved videos to {video_name}.")
